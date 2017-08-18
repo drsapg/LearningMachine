@@ -1,0 +1,158 @@
+---
+title: "LearningMovement"
+author: "Santiago Patiño-Giraldo"
+date: "16/8/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Project Learning Machine
+
+The aim of this project is create a model to predict the class of activity a person made based on variables taken by accelerometers on the belt, forearm, arm, and dumbell of 6 participants
+
+## Loading and preparing data
+
+```{r, echo=FALSE,eval=FALSE}
+download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",destfile = "training.csv",method = "curl")
+
+download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",destfile = "testing.csv",method = "curl")
+```
+
+Create two dataframes
+
+```{r}
+training <- read.csv("training.csv")
+testing <- read.csv("testing.csv")
+
+library(caret)
+library(lubridate)
+library(rpart)
+```
+Looking for the data
+
+```{r}
+str(training)
+```
+
+Some variables needs transformation, is presented as factors but there are numeric
+values
+
+```{r}
+training2 <- training
+testing2 <- testing
+training2$cvtd_timestamp <- dmy_hm(training2$cvtd_timestamp)
+testing2$cvtd_timestamp <- dmy_hm(testing2$cvtd_timestamp)
+
+tonumeric <- function(x){
+        for(i in 7:159){
+                if(is.factor(x[,i]) | is.logical(x[,i])){
+                        x[,i] <- as.numeric(x[,i])
+                }
+        }
+        x
+}
+training2 <- tonumeric(training2)
+testing2 <- tonumeric(testing2)
+```
+
+The training consist in 19622 observations of 160 variables. I discarded the measures
+with more than 50% of NA's
+
+```{r}
+countna <- function (x){
+        w <- vector()
+        for(i in 1:160){
+        y <- sum(is.na(x[i]))/nrow(x)
+        
+        if(y >= 0.5){
+        w[i] <- FALSE        
+        }
+        else{
+                w[i] <- TRUE
+        }
+        }
+        w
+}
+
+excluding <- countna(training2)
+training2 <- training2[excluding]
+testing2 <- testing2[excluding]
+str(training2)
+```
+
+I will probe 3 different prediction models: random forest, decision tree and bgm
+I cluster in 6 the training data to do that.
+
+```{r}
+set.seed(19862)
+folds.test <- createFolds(y=training2$classe,k=6,list=TRUE)
+```
+
+## Decision tree
+```{r}
+model1 <- rpart(classe~.,data=training2[folds.test$Fold1,],method="class")
+
+acc_prediction <- function(model,matrix,base,clase=NULL){
+        y <- vector()
+        for(i in 1:6){
+                if(i==base){
+                        
+                }
+                else{
+                       
+                        if(is.null(clase)){
+                         x <- predict(model,matrix[folds.test[[i]],])
+                        }
+                        else{
+                         x <- predict(model,matrix[folds.test[[i]],],type="class")       
+                        }
+                       y[i] <- confusionMatrix(x,
+                                matrix[folds.test[[i]],93])$overall[1]         
+                }
+        }
+        y
+}
+
+
+acc_model1 <- acc_prediction(model1,training2,1,"Y")
+
+```
+
+## Random Forest
+
+```{r}
+model2 <- train(classe~.,data=training2[folds.test$Fold2,],method="rpart")
+acc_model2 <- acc_prediction(model2,training2,2)
+```
+
+## Generalized Boosted Regression
+
+```{r, echo=FALSE}
+model3 <- train(classe~.,data=training2[folds.test$Fold3,],method="gbm")
+```
+
+```{r}
+acc_model3 <- acc_prediction(model3,training2,3)
+```
+
+Showing accuracies
+
+```{r}
+acc_model1
+acc_model2
+acc_model3
+```
+
+Models 1 and 3 could be overfitted but model 2 has low accuracy. 
+Model3 takes a lot of time for training
+I chose model 1
+
+```{r}
+acc_testing <- predict(model1,testing2)
+acc_testing
+```
