@@ -3,8 +3,8 @@ title: "LearningMovement"
 author: "Santiago Patiño-Giraldo"
 date: "16/8/2017"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -17,7 +17,7 @@ The aim of this project is create a model to predict the class of activity a per
 
 ## Loading and preparing data
 
-```{r, echo=FALSE,eval=FALSE}
+```{r, eval=FALSE}
 download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",destfile = "training.csv",method = "curl")
 
 download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",destfile = "testing.csv",method = "curl")
@@ -132,11 +132,11 @@ acc_model2 <- acc_prediction(model2,training2,2)
 
 ## Generalized Boosted Regression
 
-```{r, echo=FALSE}
+```{r, echo=FALSE,error=FALSE,cache=TRUE}
 model3 <- train(classe~.,data=training2[folds.test$Fold3,],method="gbm")
 ```
 
-```{r}
+```{r,error=FALSE}
 acc_model3 <- acc_prediction(model3,training2,3)
 ```
 
